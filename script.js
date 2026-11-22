@@ -8,7 +8,6 @@ let state = {
   secs: 600,
   timer: null,
   nextId: 1,
-  log: [],
   history: []
 };
 
@@ -26,13 +25,8 @@ function ensureQ(t){
 
 // Save a snapshot for undo (names are kept live, not restored)
 function snap(){
-  state.history.push(JSON.stringify({ teams: state.teams, quarter: state.quarter, log: state.log }));
+  state.history.push(JSON.stringify({ teams: state.teams, quarter: state.quarter }));
   if (state.history.length > 200) state.history.shift();
-}
-
-function logMsg(msg){
-  state.log.unshift(`${fmt(state.secs)} ${qLabel(state.quarter)}  ${msg}`);
-  if (state.log.length > 300) state.log.pop();
 }
 
 // ---------- Clock ----------
@@ -53,7 +47,6 @@ function tick(){
     state.secs = 0;
     clearInterval(state.timer);
     state.timer = null;
-    logMsg(`--- End of ${qLabel(state.quarter)} ---`);
   }
   render();
 }
@@ -75,11 +68,9 @@ function nextQuarter(){
   snap();
   clearInterval(state.timer);
   state.timer = null;
-  logMsg(`--- End of ${qLabel(state.quarter)} ---`);
   state.quarter++;
   state.teams.forEach(ensureQ);
   state.secs = state.lenSecs;
-  logMsg(`--- Start of ${qLabel(state.quarter)} ---`);
   render();
 }
 
@@ -98,7 +89,6 @@ function addPlayer(ti){
     id: state.nextId++, name, num: numEl.value.trim() || '-',
     pts: 0, reb: 0, ast: 0, pf: 0
   });
-  logMsg(`${esc(state.teams[ti].name)}: added ${name}`);
   nameEl.value = '';
   numEl.value = '';
   nameEl.focus();
@@ -116,7 +106,6 @@ function removePlayer(ti, pid){
   if (!confirm(`Remove ${p.name} from the roster?`)) return;
   snap();
   t.players = t.players.filter(x => x.id !== pid);
-  logMsg(`${esc(t.name)}: removed ${p.name}`);
   render();
 }
 
@@ -148,7 +137,6 @@ function act(ti, pid, type){
     msg = `FOUL ${p.name} (${p.pf})`;
     if (p.pf === 6) msg += ' FOULED OUT';
   }
-  logMsg(`${esc(t.name)}: ${msg}`);
   render();
 }
 
@@ -161,7 +149,6 @@ function undo(){
   state.teams = s.teams;
   state.teams.forEach((t, i) => t.name = names[i]);
   state.quarter = s.quarter;
-  state.log = s.log;
   if (changedQuarter) state.secs = state.lenSecs;
   render();
 }
@@ -172,7 +159,7 @@ function newGame(){
   state = {
     teams: [mkTeam('Home'), mkTeam('Away')],
     quarter: 1, lenSecs: +$('lenSel').value * 60, secs: +$('lenSel').value * 60,
-    timer: null, nextId: 1, log: [], history: []
+    timer: null, nextId: 1, history: []
   };
   $('name0').value = 'Home';
   $('name1').value = 'Away';
@@ -223,26 +210,6 @@ function renderRosters(){
   state.teams.forEach((t, i) => { $('roster'+i).innerHTML = tableHTML(t, true); });
 }
 
-function renderChart(){
-  const [a, b] = state.teams;
-  const n = Math.max(4, a.q.length, b.q.length, state.quarter);
-  const max = Math.max(1, ...a.q, ...b.q);
-  const bar = (v, c) => `<div class="bar" style="height:${Math.max(2, v/max*80)}px;background:${c}"><span>${v}</span></div>`;
-  let html = '';
-  for (let i = 0; i < n; i++){
-    html += `<div class="qcol">
-      <div class="bars">${bar(a.q[i]||0, 'var(--a)')}${bar(b.q[i]||0, 'var(--b)')}</div>
-      <div class="muted">${qLabel(i+1)}</div></div>`;
-  }
-  $('chart').innerHTML = html;
-  $('legA').textContent = '■ ' + a.name;
-  $('legB').textContent = '■ ' + b.name;
-}
-
-function renderLog(){
-  $('log').innerHTML = state.log.length ? state.log.map(l => `<div>${l}</div>`).join('') : '<span class="muted">No events yet.</span>';
-}
-
 function renderClock(){
   $('clock').textContent = fmt(state.secs);
   $('centerQ').textContent = qLabel(state.quarter);
@@ -255,8 +222,6 @@ function render(){
   renderClock();
   renderBoard();
   renderRosters();
-  renderChart();
-  renderLog();
 }
 
 // ---------- End game and MVP ----------
@@ -297,16 +262,6 @@ function endGame(){
     <p style="text-align:center;font-size:18px">${winner}</p>
 
     <div class="section">
-      <h3>Scoring by quarter</h3>
-      <div class="scroll"><table>
-        <thead><tr><th>Team</th>${a.q.map((_, i) => `<th>${qLabel(i+1)}</th>`).join('')}<th>Total</th></tr></thead>
-        <tbody>
-          <tr><td>${esc(a.name)}</td>${a.q.map(v => `<td>${v}</td>`).join('')}<td><b>${a.score}</b></td></tr>
-          <tr><td>${esc(b.name)}</td>${b.q.map(v => `<td>${v}</td>`).join('')}<td><b>${b.score}</b></td></tr>
-        </tbody></table></div>
-    </div>
-
-    <div class="section">
       <h3>MVP</h3>
       ${mvp ? `<div class="mvp">${esc(mvp.p.name)} (${esc(mvp.t.name)}), score ${impact(mvp.p).toFixed(1)}</div>` : '<p class="muted">No players recorded.</p>'}
       <p class="muted">Impact = PTS + REB + 1.5 × AST − 0.5 × PF. Top players shown below.</p>
@@ -332,7 +287,6 @@ function useTimeout(ti){
   }
   snap();
   t.timeouts--;
-  logMsg(`${esc(t.name)}: TIMEOUT (${t.timeouts} left)`);
   render();
 }
 
@@ -360,7 +314,6 @@ function saveEdit(){
   }));
   snap();
   state.teams.forEach((t, i) => { t.penalties = vals[i].p; t.timeouts = vals[i].to; });
-  logMsg('Penalties and timeouts updated');
   closeEdit();
   render();
 }
@@ -375,7 +328,6 @@ function reportLines(){
   const pad = (s, n) => String(s).slice(0, n).padEnd(n);
   const rpad = (s, n) => String(s).slice(0, n).padStart(n);
   const [a, b] = state.teams;
-  const nQ = Math.max(4, a.q.length, b.q.length);
   const all = [];
   state.teams.forEach(t => t.players.forEach(p => all.push({ p, t })));
   const ranked = all.slice().sort((x, y) => impact(y.p) - impact(x.p));
@@ -386,20 +338,6 @@ function reportLines(){
   L.push('');
   L.push(`${a.name}  ${a.score}   -   ${b.score}  ${b.name}`);
   L.push(winner);
-  L.push('');
-
-  L.push('SCORING BY QUARTER');
-  let qh = pad('Team', 18);
-  for (let i = 0; i < nQ; i++) qh += rpad(qLabel(i+1), 6);
-  qh += rpad('Total', 8);
-  L.push(qh);
-  L.push('-'.repeat(qh.length));
-  state.teams.forEach(t => {
-    let row = pad(t.name, 18);
-    for (let i = 0; i < nQ; i++) row += rpad(t.q[i] || 0, 6);
-    row += rpad(t.score, 8);
-    L.push(row);
-  });
   L.push('');
 
   state.teams.forEach(t => {
