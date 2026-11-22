@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Basketball Record Chart</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Game clock and controls -->
+  <div class="card">
+    <div class="top">
+      <div>
+        <h1>Basketball Record Chart</h1>
+        <div class="muted" id="qLabel">Quarter 1</div>
+      </div>
+      <div class="row">
+        <select id="lenSel" onchange="setLength(this.value)">
+          <option value="12">12 min</option>
+          <option value="10" selected>10 min</option>
+          <option value="8">8 min</option>
+          <option value="5">5 min</option>
+          <option value="2">2 min</option>
+        </select>
+        <button class="primary" id="startBtn" onclick="toggleClock()">Start</button>
+        <button onclick="resetClock()">Reset clock</button>
+        <button onclick="nextQuarter()">Next quarter</button>
+        <button onclick="undo()">Undo</button>
+        <button onclick="downloadPDF()">Download PDF</button>
+        <button onclick="openEdit()">Penalties &amp; timeouts</button>
+        <button class="danger" onclick="endGame()">End game</button>
+        <button onclick="newGame()">New game</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scoreboard -->
+  <div class="card">
+    <div class="board">
+      <div id="boardA"></div>
+      <div>
+        <div class="muted">QUARTER</div>
+        <div id="centerQ" style="font-size:36px;font-weight:800;color:var(--good)">Q1</div>
+        <div class="clock" id="clock" style="font-size:44px;margin-top:4px">10:00</div>
+      </div>
+      <div id="boardB"></div>
+    </div>
+  </div>
+
+  <!-- Teams: names and rosters -->
+  <div class="teams">
+    <div class="card">
+      <h2 style="color:var(--a)">Team 1</h2>
+      <div class="row" style="margin-bottom:10px">
+        <input id="name0" value="Home" oninput="renameTeam(0,this.value)" placeholder="Team name">
+        <button class="primary" onclick="useTimeout(0)">Timeout</button>
+      </div>
+      <div class="row" style="margin-bottom:10px">
+        <input id="pn0" placeholder="Player name" onkeydown="if(event.key==='Enter')addPlayer(0)">
+        <input id="pnum0" placeholder="#" style="width:70px" onkeydown="if(event.key==='Enter')addPlayer(0)">
+        <button class="primary" onclick="addPlayer(0)">Add player</button>
+      </div>
+      <div id="roster0"></div>
+    </div>
+
+    <div class="card">
+      <h2 style="color:var(--b)">Team 2</h2>
+      <div class="row" style="margin-bottom:10px">
+        <input id="name1" value="Away" oninput="renameTeam(1,this.value)" placeholder="Team name">
+        <button class="primary" onclick="useTimeout(1)">Timeout</button>
+      </div>
+      <div class="row" style="margin-bottom:10px">
+        <input id="pn1" placeholder="Player name" onkeydown="if(event.key==='Enter')addPlayer(1)">
+        <input id="pnum1" placeholder="#" style="width:70px" onkeydown="if(event.key==='Enter')addPlayer(1)">
+        <button class="primary" onclick="addPlayer(1)">Add player</button>
+      </div>
+      <div id="roster1"></div>
+    </div>
+  </div>
+
+  <!-- Quarter chart -->
+  <div class="card">
+    <div class="top" style="margin-bottom:10px">
+      <h2>Scoring by quarter</h2>
+      <div class="row muted">
+        <span style="color:var(--a)" id="legA">■ Team 1</span>
+        <span style="color:var(--b)" id="legB">■ Team 2</span>
+      </div>
+    </div>
+    <div class="chart" id="chart"></div>
+  </div>
+
+  <!-- Event log -->
+  <div class="card">
+    <h2>Game log</h2>
+    <div class="log" id="log"></div>
+  </div>
+</div>
+
+<!-- Penalties and timeouts editor -->
+<div class="overlay" id="editOverlay" onclick="if(event.target===this)closeEdit()">
+  <div class="modal">
+    <h2>Penalties &amp; timeouts</h2>
+    <p class="muted">Penalties: team penalties counted for the game. Timeouts left: timeouts each team still has.</p>
+    <div id="editFields"></div>
+    <div class="row" style="justify-content:flex-end">
+      <button onclick="closeEdit()">Cancel</button>
+      <button class="primary" onclick="saveEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Summary overlay -->
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeSummary()">
+  <div class="modal" id="summary"></div>
+</div>
+
+  <script src="script.js"></script>
+</body>
+</html>
